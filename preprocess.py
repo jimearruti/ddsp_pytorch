@@ -16,7 +16,7 @@ def get_files(data_location, extension, **kwargs):
 
 
 def preprocess(f, sampling_rate, block_size, signal_length, oneshot, **kwargs):
-    x, sr = li.load(f, sampling_rate)
+    x, sr = li.load(f, sr=sampling_rate)
     N = (signal_length - len(x) % signal_length) % signal_length
     x = np.pad(x, (0, N))
 
