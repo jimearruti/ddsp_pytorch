@@ -1,14 +1,14 @@
-import yaml
 import pathlib
+from os import makedirs, path
+
 import librosa as li
+import numpy as np
+import torch
+import yaml
+from tqdm import tqdm
+
 from ddsp.core import extract_loudness, extract_pitch
 from effortless_config import Config
-import numpy as np
-from tqdm import tqdm
-import numpy as np
-from os import makedirs, path
-import torch
-from scipy.io import wavfile
 
 
 def get_files(data_location, extension, **kwargs):
@@ -46,6 +46,24 @@ class Dataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         s = torch.from_numpy(self.signals[idx])
         p = torch.from_numpy(self.pitchs[idx])
+        l = torch.from_numpy(self.loudness[idx])
+        return s, p, l
+    
+
+class DatasetMultiInstrument(torch.utils.data.Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]):
+    def __init__(self, out_dir: str | pathlib.Path, instrument: str) -> None:
+        super().__init__()
+        data_path = pathlib.Path(out_dir) / instrument
+        self.signals = np.load(data_path / "signals.npy")
+        self.pitches = np.load(data_path / "pitches.npy")
+        self.loudness = np.load(data_path / "loudness.npy")
+
+    def __len__(self) -> int:
+        return self.signals.shape[0]
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        s = torch.from_numpy(self.signals[idx])
+        p = torch.from_numpy(self.pitches[idx])
         l = torch.from_numpy(self.loudness[idx])
         return s, p, l
 
