@@ -1,6 +1,25 @@
 data:
   data_location: ../data/URMP/Dataset
   extension: "wav"
+  instruments: [
+    # strings
+    'vn',
+    'va',
+    'vc',
+    'db',
+    # woodwinds
+    'fl',
+    'ob',
+    'cl',
+    'bn',
+    'sax',
+    # brass
+    'tpt', 
+    'hn', 
+    'tbn', 
+    'tba', 
+    'tba', 
+]
 
 preprocess:
   sampling_rate: &samplingrate 16000
