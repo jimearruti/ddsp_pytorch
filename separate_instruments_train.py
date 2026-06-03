@@ -6,6 +6,7 @@ import torch
 import yaml
 import wandb
 
+from dotenv import load_dotenv
 from effortless_config import Config
 
 from ddsp.core import mean_std_loudness, multiscale_fft, safe_log
@@ -15,7 +16,6 @@ from preprocess import DatasetMultiInstrument
 from tqdm import tqdm
 
 
-from dotenv import load_dotenv
 load_dotenv()
 wandb.login(key=os.environ.get("WANDB_API_KEY"))
 
@@ -84,10 +84,10 @@ for instrument in instruments:
         args.DECAY_OVER,
     )
 
-    #scheduler = torch.optim.lr_scheduler.LambdaLR(opt, schedule)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(opt, schedule)
 
     best_loss = float("inf")
-    mean_loss = 0
+    mean_loss = 0.0
     n_element = 0
     step = 0
     epochs = int(np.ceil(args.STEPS / len(dataloader)))
@@ -122,41 +122,39 @@ for instrument in instruments:
             opt.zero_grad()
             loss.backward()
             opt.step()
+            scheduler.step()
 
             wandb.log({"loss": loss.item()}, step=step)
 
-            step += 1
-
             n_element += 1
             mean_loss += (loss.item() - mean_loss) / n_element
+            step += 1
 
-        if not e % 10:
-            wandb.log({
-                "lr": schedule(e),
-                "reverb_decay": model.reverb.decay.item(),
-                "reverb_wet": model.reverb.wet.item(),
-            }, step=step)
+            if not step % 1000:
+                wandb.log({
+                    "lr": schedule(e),
+                    "reverb_decay": model.reverb.decay.item(),
+                    "reverb_wet": model.reverb.wet.item(),
+                }, step=step)
 
-            # scheduler.step()
-            
-            if mean_loss < best_loss:
-                best_loss = mean_loss
-                torch.save(
-                    model.state_dict(),
-                    save_path / "state.pth",
+                if mean_loss < best_loss:
+                    best_loss = mean_loss
+                    torch.save(
+                        model.state_dict(),
+                        save_path / "state.pth",
+                    )
+
+                mean_loss = 0.0
+                n_element = 0
+
+                audio = torch.cat([s, y], -1).reshape(-1).detach().cpu().numpy()
+                
+                wandb.log({"audio": wandb.Audio(audio, sample_rate=config["preprocess"]["sampling_rate"])}, step=step)
+
+                sf.write(
+                    save_path / f"eval_{e:06d}.wav",
+                    audio,
+                    config["preprocess"]["sampling_rate"],
                 )
-
-            mean_loss = 0
-            n_element = 0
-
-            audio = torch.cat([s, y], -1).reshape(-1).detach().cpu().numpy()
-            
-            wandb.log({"audio": wandb.Audio(audio, sample_rate=config["preprocess"]["sampling_rate"])}, step=step)
-
-            sf.write(
-                save_path / f"eval_{e:06d}.wav",
-                audio,
-                config["preprocess"]["sampling_rate"],
-            )
         
     run.finish()
