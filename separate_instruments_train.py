@@ -20,6 +20,7 @@ load_dotenv()
 wandb.login(key=os.environ.get("WANDB_API_KEY"))
 
 
+# training config
 class args(Config):
     CONFIG = "config.yaml"
     NAME = "debug"
@@ -29,16 +30,22 @@ class args(Config):
     START_LR = 1e-3
     STOP_LR = 1e-4
     DECAY_OVER = 400000
+    INSTRUMENT = None
 
 
 args.parse_args()
 
+# model config
 with open(args.CONFIG, "r") as config_file:
     config = yaml.safe_load(config_file)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-instruments = config["data"]["instruments"]
+instruments = (
+    [args.INSTRUMENT] 
+    if args.INSTRUMENT 
+    else config["data"]["instruments"]
+)
 
 for instrument in instruments:
     save_path = pathlib.Path(args.ROOT) / args.NAME / instrument

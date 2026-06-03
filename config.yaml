@@ -17,8 +17,6 @@ data:
     'tpt', 
     'hn', 
     'tbn', 
-    'tba', 
-    'tba', 
 ]
 
 preprocess:
