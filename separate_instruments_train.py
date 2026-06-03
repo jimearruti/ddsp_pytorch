@@ -121,10 +121,11 @@ for instrument in instruments:
 
             opt.zero_grad()
             loss.backward()
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), float("inf"))
             opt.step()
             scheduler.step()
 
-            wandb.log({"loss": loss.item()}, step=step)
+            wandb.log({"loss": loss.item(), "grad_norm": grad_norm.item()}, step=step)
 
             n_element += 1
             mean_loss += (loss.item() - mean_loss) / n_element
