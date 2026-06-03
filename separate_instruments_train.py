@@ -1,3 +1,4 @@
+import os
 import pathlib
 import numpy as np
 import soundfile as sf
@@ -12,6 +13,11 @@ from ddsp.model import DDSP
 from ddsp.utils import get_scheduler
 from preprocess import DatasetMultiInstrument
 from tqdm import tqdm
+
+
+from dotenv import load_dotenv
+load_dotenv()
+wandb.login(key=os.environ.get("WANDB_API_KEY"))
 
 
 class args(Config):
@@ -46,7 +52,9 @@ for instrument in instruments:
         dataset,
         args.BATCH,
         True,
-        drop_last=True
+        drop_last=True,
+        num_workers=4,
+        pin_memory=True,
     )
 
     mean_loudness, std_loudness = mean_std_loudness(dataloader)
@@ -71,7 +79,7 @@ for instrument in instruments:
         args.DECAY_OVER,
     )
 
-    # scheduler = torch.optim.lr_scheduler.LambdaLR(opt, schedule)
+    #scheduler = torch.optim.lr_scheduler.LambdaLR(opt, schedule)
 
     best_loss = float("inf")
     mean_loss = 0
