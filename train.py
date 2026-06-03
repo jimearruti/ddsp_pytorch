@@ -18,7 +18,7 @@ class args(Config):
     NAME = "debug"
     ROOT = "runs"
     STEPS = 100000
-    BATCH = 64
+    BATCH = 16
     START_LR = 1e-3
     STOP_LR = 1e-4
     DECAY_OVER = 400000
@@ -39,9 +39,7 @@ dataloader = torch.utils.data.DataLoader(
     dataset,
     args.BATCH,
     True,
-    drop_last=True,
-    num_workers=0,
-    pin_memory=True
+    drop_last=True
 )
 
 mean_loudness, std_loudness = mean_std_loudness(dataloader)
