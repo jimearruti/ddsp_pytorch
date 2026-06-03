@@ -1,19 +1,20 @@
 import os
 import pathlib
+from datetime import datetime
+
 import numpy as np
 import soundfile as sf
 import torch
-import yaml
 import wandb
-
+import yaml
 from dotenv import load_dotenv
 from effortless_config import Config
+from tqdm import tqdm
 
 from ddsp.core import mean_std_loudness, multiscale_fft, safe_log
 from ddsp.model import DDSP
 from ddsp.utils import get_scheduler
 from preprocess import DatasetMultiInstrument
-from tqdm import tqdm
 
 
 load_dotenv()
@@ -46,9 +47,11 @@ instruments = (
     if args.INSTRUMENT 
     else config["data"]["instruments"]
 )
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
 
 for instrument in instruments:
-    save_path = pathlib.Path(args.ROOT) / args.NAME / instrument
+    save_path = pathlib.Path(args.ROOT) / args.NAME / timestamp / instrument
     save_path.mkdir(parents=True, exist_ok=True)
 
     model = DDSP(**config["model"]).to(device)
