@@ -6,8 +6,7 @@ def get_scheduler(len_dataset, start_lr, stop_lr, length):
         step = epoch * len_dataset
         if step < length:
             t = step / length
-            return start_lr * (1 - t) + stop_lr * t
+            return start_lr * (stop_lr / start_lr) ** t
         else:
             return stop_lr
-
     return schedule
