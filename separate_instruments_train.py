@@ -131,7 +131,7 @@ for instrument in instruments:
             mean_loss += (loss.item() - mean_loss) / n_element
             step += 1
 
-            if not step % 1000:
+            if not e % 10:
                 wandb.log({
                     "lr": schedule(e),
                     "reverb_decay": model.reverb.decay.item(),
