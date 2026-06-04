@@ -148,18 +148,16 @@ for instrument in instruments:
                         model.state_dict(),
                         save_path / "state.pth",
                     )
-                    
-                wandb.log({
-                    "mean_loss": mean_loss,
-                }, step=step)
-    
-                mean_loss = 0.0
-                n_element = 0
     
                 audio = torch.cat([s, y], -1).reshape(-1).detach().cpu().numpy()
                 
-                wandb.log({"audio": wandb.Audio(audio, sample_rate=config["preprocess"]["sampling_rate"])}, step=step)
-    
+                wandb.log({"mean_loss": mean_loss,
+                           "audio": wandb.Audio(audio, sample_rate=config["preprocess"]["sampling_rate"])
+                }, step=step)
+                
+                mean_loss = 0.0
+                n_element = 0
+                
                 sf.write(
                     save_path / f"eval_{e:06d}.wav",
                     audio,
