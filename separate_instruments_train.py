@@ -134,7 +134,7 @@ for instrument in instruments:
 
             if not step % 100:
                 wandb.log({
-                    "loss": loss.item(), 
+                    "loss": loss.item(),
                     "grad_norm": grad_norm.item(),
                     "lr": opt.param_groups[0]["lr"],
                     "reverb_decay": model.reverb.decay.item(),
@@ -148,6 +148,10 @@ for instrument in instruments:
                         model.state_dict(),
                         save_path / "state.pth",
                     )
+                    
+                wandb.log({
+                    "mean_loss": mean_loss,
+                }, step=step)
     
                 mean_loss = 0.0
                 n_element = 0
