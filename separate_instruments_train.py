@@ -137,8 +137,9 @@ for instrument in instruments:
                     "loss": loss.item(),
                     "grad_norm": grad_norm.item(),
                     "lr": opt.param_groups[0]["lr"],
-                    "reverb_decay": model.reverb.decay.item(),
-                    "reverb_wet": model.reverb.wet.item(),
+                    "reverb_decay": torch.nn.functional.softplus(-model.reverb.decay).item() * 500,
+                    "reverb_wet": torch.sigmoid(model.reverb.wet).item(),
+                    "epoch": e,
                 }, step=step)
 
             if not step % 1000:
