@@ -17,8 +17,9 @@ class args(Config):
 
 
 args.parse_args()
-makedirs(args.OUT_DIR, exist_ok=True)
-
+run_string = args.RUN.replace('/', '_')
+export_dir = path.join(args.OUT_DIR, run_string)
+makedirs(export_dir, exist_ok=True)
 
 class ScriptDDSP(torch.nn.Module):
     def __init__(self, ddsp, mean_loudness, std_loudness, realtime):
@@ -61,18 +62,18 @@ scripted_model = torch.jit.script(
     ))
 torch.jit.save(
     scripted_model,
-    path.join(args.OUT_DIR, f"ddsp_{name}_pretrained.ts"),
+    path.join(export_dir, f"ddsp_{name}_pretrained.ts"),
 )
 
 impulse = ddsp.reverb.build_impulse().reshape(-1).numpy()
 sf.write(
-    path.join(args.OUT_DIR, f"ddsp_{name}_impulse.wav"),
+    path.join(export_dir, f"ddsp_{name}_impulse.wav"),
     impulse,
     config["preprocess"]["sampling_rate"],
 )
 
 with open(
-        path.join(args.OUT_DIR, f"ddsp_{name}_config.yaml"),
+        path.join(export_dir, f"ddsp_{name}_config.yaml"),
         "w",
 ) as config_out:
     yaml.safe_dump(config, config_out)
