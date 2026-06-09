@@ -44,7 +44,8 @@ class DDSP(nn.Module):
         self.register_buffer("sampling_rate", torch.tensor(sampling_rate))
         self.register_buffer("block_size", torch.tensor(block_size))
 
-        self.in_mlps = nn.ModuleList([mlp(1, hidden_size, 3)] * 2)
+        # There was a bug! Change proposed in issue https://github.com/acids-ircam/ddsp_pytorch/issues/37
+        self.in_mlps = nn.ModuleList([mlp(1, hidden_size, 3) for _ in range(2)])
         self.gru = gru(2, hidden_size)
         self.out_mlp = mlp(hidden_size + 2, hidden_size, 3)
 
