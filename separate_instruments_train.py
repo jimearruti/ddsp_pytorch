@@ -69,6 +69,9 @@ for instrument in instruments:
     config["data"]["mean_loudness"] = mean_loudness
     config["data"]["std_loudness"] = std_loudness
 
+    mean_loudness = torch.tensor(mean_loudness, device=device)
+    std_loudness = torch.tensor(std_loudness, device=device)
+
     run = wandb.init(
         project=args.NAME,
         name=instrument,
@@ -88,7 +91,7 @@ for instrument in instruments:
     )
 
     best_loss = float("inf")
-    mean_loss = 0.0
+    mean_loss = torch.zeros(1, device=device)
     n_element = 0
     step = 0
     epochs = int(np.ceil(args.STEPS / len(dataloader)))
@@ -108,6 +111,7 @@ for instrument in instruments:
                 config["train"]["scales"],
                 config["train"]["overlap"],
             )
+
             rec_stft = multiscale_fft(
                 y,
                 config["train"]["scales"],
@@ -128,8 +132,8 @@ for instrument in instruments:
             for g in opt.param_groups:
                 g["lr"] = schedule(step)
 
+            mean_loss += loss.detach()
             n_element += 1
-            mean_loss += (loss.item() - mean_loss) / n_element
             step += 1
 
             if not step % 100:
@@ -143,8 +147,12 @@ for instrument in instruments:
                 }, step=step)
 
             if not step % 1000:
-                if mean_loss < best_loss:
-                    best_loss = mean_loss
+                mean_loss_val = (mean_loss / n_element).item()
+                mean_loss = torch.zeros(1, device=device)
+                n_element = 0
+                
+                if mean_loss_val < best_loss:
+                    best_loss = mean_loss_val
                     torch.save(
                         model.state_dict(),
                         save_path / "state.pth",
@@ -152,17 +160,14 @@ for instrument in instruments:
     
                 audio = torch.cat([s, y], -1).reshape(-1).detach().cpu().numpy()
                 
-                wandb.log({"mean_loss": mean_loss,
+                wandb.log({"mean_loss": mean_loss_val,
                            "audio": wandb.Audio(audio, sample_rate=config["preprocess"]["sampling_rate"])
                 }, step=step)
-                
-                mean_loss = 0.0
-                n_element = 0
-                
+                                
                 sf.write(
                     save_path / f"eval_{e:06d}.wav",
                     audio,
                     config["preprocess"]["sampling_rate"],
                 )
-        
+    
     run.finish()
