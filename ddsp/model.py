@@ -51,7 +51,7 @@ class DDSP(nn.Module):
 
         self.proj_matrices = nn.ModuleList([
             nn.Linear(hidden_size, n_harmonic + 1),
-            nn.Linear(hidden_size, n_bands + 1),
+            nn.Linear(hidden_size, n_bands),
         ])
 
         self.reverb = Reverb(sampling_rate, sampling_rate)
@@ -88,8 +88,6 @@ class DDSP(nn.Module):
 
         # noise part
         param = scale_function(self.proj_matrices[1](hidden) - 5)
-        noise_total_amp = param[..., :1]
-        param = param[..., 1:]  
 
         impulse = amp_to_impulse_response(param, self.block_size)
         noise = torch.rand(
@@ -99,7 +97,6 @@ class DDSP(nn.Module):
         ).to(impulse) * 2 - 1
 
         noise = fft_convolve(noise, impulse).contiguous()
-        noise *= noise_total_amp
         noise = noise.reshape(noise.shape[0], -1, 1)
         
         signal = harmonic + noise
@@ -150,8 +147,6 @@ class DDSP(nn.Module):
 
         # noise part
         param = scale_function(self.proj_matrices[1](hidden) - 5)
-        noise_total_amp = param[..., :1]
-        param = param[..., 1:]  
 
         impulse = amp_to_impulse_response(param, self.block_size)
         noise = torch.rand(
@@ -161,7 +156,6 @@ class DDSP(nn.Module):
         ).to(impulse) * 2 - 1
 
         noise = fft_convolve(noise, impulse).contiguous()
-        noise *= noise_total_amp
         noise = noise.reshape(noise.shape[0], -1, 1)
 
         signal = harmonic + noise
