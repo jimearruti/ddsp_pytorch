@@ -50,10 +50,10 @@ class Dataset(torch.utils.data.Dataset):
         return s, p, l
     
 
-class DatasetMultiInstrument(torch.utils.data.Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]):
-    def __init__(self, out_dir: str | pathlib.Path, instrument: str) -> None:
+class DatasetMultiInstrument(torch.utils.data.Dataset):
+    def __init__(self, out_dir, instrument, subset="train"):
         super().__init__()
-        data_path = pathlib.Path(out_dir) / instrument
+        data_path = pathlib.Path(out_dir) / instrument / subset
         self.signals = np.load(data_path / "signals.npy")
         self.pitches = np.load(data_path / "pitches.npy")
         self.loudness = np.load(data_path / "loudness.npy")

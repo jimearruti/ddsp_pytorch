@@ -12,14 +12,28 @@ from effortless_config import Config
 def get_files(data_location: str, extension: str, **_) -> list[pathlib.Path]:
     return list(pathlib.Path(data_location).rglob(f"*.{extension}"))
 
+
+def split_files(files, val_ratio=0.1, test_ratio=0.1, seed=42):
+    rng = np.random.default_rng(seed)
+    files = list(rng.permutation(files))
+    n = len(files)
+    n_test = max(1, int(test_ratio * n))
+    n_val  = max(1, int(val_ratio * n))
+    test  = files[:n_test]
+    val   = files[n_test:n_test + n_val]
+    train = files[n_test + n_val:]
+    return train, val, test
+
+
+def save_subdataset(signals, pitches, loudness, out_path):
+    out_path.mkdir(parents=True, exist_ok=True)
+    np.save(out_path / "signals.npy", signals)
+    np.save(out_path / "pitches.npy", pitches)
+    np.save(out_path / "loudness.npy", loudness)
+
+
 def preprocess(
-    f: str | pathlib.Path,
-    sampling_rate: int,
-    block_size: int,
-    signal_length: int,
-    oneshot: bool,
-    **_,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    f, sampling_rate, block_size, signal_length, oneshot, **_):
     '''Preprocess a single audio file.
     Args:
         f: Path to the audio file.
@@ -45,10 +59,33 @@ def preprocess(
     return x, pitch, loudness
 
 
-def main():
+def process_files(files, config):
+    if not files:
+        raise ValueError(f"No files to process — dataset may be too small to split.")
+    
+    signals: list[np.ndarray] = []
+    pitches: list[np.ndarray] = []
+    loudness: list[np.ndarray] = []
 
+    progress_bar = tqdm(files)
+    for f in progress_bar:
+        progress_bar.set_description(str(f))
+        x, p, l = preprocess(f, **config["preprocess"])
+        signals.append(x)
+        pitches.append(p)
+        loudness.append(l)
+
+    signals = np.concatenate(signals, 0).astype(np.float32)
+    pitches = np.concatenate(pitches, 0).astype(np.float32)
+    loudness = np.concatenate(loudness, 0).astype(np.float32)
+
+    return (signals, pitches, loudness)
+
+
+def main():
     class args(Config):
         CONFIG = "config.yaml"
+        SPLIT_DATASET = True
 
     args.parse_args()
 
@@ -62,28 +99,17 @@ def main():
     for instrument in instruments:
 
         files_instrument = [f for f in files if f.stem.split("_")[2] == instrument]
-        progress_bar = tqdm(files_instrument)
-
-        signals: list[np.ndarray] = []
-        pitches: list[np.ndarray] = []
-        loudness: list[np.ndarray] = []
-
-        for f in progress_bar:
-            progress_bar.set_description(str(f))
-            x, p, l = preprocess(f, **config["preprocess"])
-            signals.append(x)
-            pitches.append(p)
-            loudness.append(l)
-
-        signals = np.concatenate(signals, 0).astype(np.float32)
-        pitches = np.concatenate(pitches, 0).astype(np.float32)
-        loudness = np.concatenate(loudness, 0).astype(np.float32)
-
         out_path = pathlib.Path(config["preprocess"]["out_dir"]) / instrument
-        out_path.mkdir(parents=True, exist_ok=True)
-        np.save(out_path / "signals.npy", signals)
-        np.save(out_path / "pitches.npy", pitches)
-        np.save(out_path / "loudness.npy", loudness)
+
+        if args.SPLIT_DATASET:
+            train_files, val_files, test_files = split_files(files_instrument)
+            for subset, subset_files in [("train", train_files), ("val", val_files), ("test", test_files)]:
+                signals, pitches, loudness = process_files(subset_files, config)
+                save_subdataset(signals, pitches, loudness, out_path / subset)
+        else:
+            train_files, val_files, test_files = files_instrument, [], []
+            signals, pitches, loudness = process_files(train_files, config)
+            save_subdataset(signals, pitches, loudness, out_path / "train")
 
 
 if __name__ == "__main__":
